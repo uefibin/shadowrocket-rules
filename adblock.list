@@ -1,0 +1,31 @@
+# 微信 / 支付宝 + 小程序 去广告规则集
+# 用法（可选路径）：把本文件放到你的 GitHub Gist（raw 链接），
+# 然后在配置的 [Rule] 里引用：
+#   RULE-SET,https://你的gist地址/adblock.list,REJECT
+# 注意：引用前仍然要把 adblock-wx-alipay.conf 里的「第 0 段保护白名单」
+# 手写在你原有规则的最上面，否则可能误杀微信/支付宝核心域名。
+#
+# 如果你不会搞 Gist，直接用 adblock-wx-alipay.conf 复制粘贴更省事。
+
+# 腾讯广告 / 优量汇
+DOMAIN-SUFFIX,gdt.qq.com
+DOMAIN-SUFFIX,e.qq.com
+DOMAIN-SUFFIX,ad.qq.com
+DOMAIN-SUFFIX,ugdtimg.com
+DOMAIN-SUFFIX,pgdt.gtimg.cn
+
+# 穿山甲 / GroMore
+DOMAIN-SUFFIX,pangolin-sdk-toutiao.com
+DOMAIN-SUFFIX,pangolin-sdk-toutiao1.com
+DOMAIN-SUFFIX,pangolin-sdk-toutiao-b.com
+DOMAIN-SUFFIX,pglstatp-toutiao.com
+DOMAIN-SUFFIX,lf-cdn-tos.bytescm.com
+DOMAIN-SUFFIX,tnc3-alisc1.zijieapi.com
+
+# 百度联盟
+DOMAIN-SUFFIX,mobads.baidu.com
+
+# 海外 SDK
+DOMAIN-SUFFIX,doubleclick.net
+DOMAIN-SUFFIX,googleadservices.com
+DOMAIN-SUFFIX,applovin.com

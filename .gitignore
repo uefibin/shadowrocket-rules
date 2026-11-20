@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 抓包 / 调试产物
+*.log
+*-log.txt
+dns-log.txt
+domains-log.txt
+*.png
+*.jpg
+*.pcap
+*.har
+
+# 本地临时
+*.bak
+*.tmp
+*.swp
+~$*
+.venv/
+venv/
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
