@@ -1,5 +1,18 @@
 # 支付宝小程序抓包分析（2026-11-20）
 
+## 第二次复测：旧两条拦截均生效，开屏仍出现
+
+用户在加载 GitHub 试验配置后反馈广告依旧出现。本次重新读取同一日志接口取得 HTTP 200、278420 字节，日志起始 16:16:52，最后观测时间 16:17:42。原始记录保存在 Git 忽略的 `capture-retest-log.txt`。
+
+- `adx.ssp.show` 三次规则查询均命中带结束边界的 URL-REGEX REJECT。
+- `homepage.recommend.popUp` 两次规则查询均命中新增的 URL-REGEX REJECT。
+- MITM 列表含 `api.hellobike.com`，哈啰请求已解密。因此不能将此次失败归因于用户未安装或未启用规则。
+- 16:17:06.471，流 54 的 TLS SNI 为 `render.alipay.com`，当时只记录域名层连接，没有可判断用途的 URL 路径。这发生在第一条 `adx.ssp.show`（16:17:08.411）之前，是需进一步观测的启动连接，尚不能确认是开屏来源。
+
+提供独立的 `AdBlock_SR.alipay-diagnostic.conf`，与原试验配置相比只追加 `render.alipay.com` 到 MITM 及诊断注释，保留原规则以便对照。没有添加新的广告拒绝规则。用户需选用这份诊断配置，保留已信任的 CA，重连后完整退出支付宝再进入哈啰，复现一次开屏，然后读取日志确定 render 的 URL。若解密导致正常页面打不开，立即切回原试验配置。
+
+该域名也用于正常 H5 页面，见[支付宝官方 web-view 文档](https://github.com/AlipayDocs/open-docs/blob/main/mini/component/%E5%9F%BA%E7%A1%80%E7%BB%84%E4%BB%B6/%E5%BC%80%E6%94%BE%E7%BB%84%E4%BB%B6/web-view/web-view%20H5%20%E9%A1%B5%E9%9D%A2%E6%89%BF%E8%BD%BD.md)，不能将整个域名视为广告封锁。若新日志仍只有 TLS 连接，应继续检查协议和解密错误；若请求不再发生而广告仍展示，再查缓存或公共网关渠道。此次尚未取得广告内容响应，问题未解决。
+
 数据源：用户提供的局域网接口 `http://192.168.95.2:1082/api/log`。本次直连取得 HTTP 200、约 669 KB、8791 行文本，时间覆盖 16:03:52–16:10:53。接口保持连接并持续输出，curl 到时退出不代表未获取日志。原始日志仅保留在被 Git 忽略的本机文件 `capture-log.txt`；其中包含身份与定位等字段，不放入分析报告。
 
 这是 Shadowrocket 连接/规则日志与部分解密请求，并非完整双向 HTTP 响应抓包。此次能明确归属支付宝的小程序主要是哈啰（AppHellobikeAliSS）；不能据此推出适用于所有支付宝小程序的广告黑名单。

@@ -1,5 +1,10 @@
 # Shadowrocket 规则集
 
+> 最新复测：两条哈啰接口拦截都已命中，但 6 秒开屏仍在。
+> 下一步使用 `AdBlock_SR.alipay-diagnostic.conf`，它只追加 `render.alipay.com` 解密以记录具体 URL，**不是已修复版**。
+> 下载地址：`https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.alipay-diagnostic.conf`。
+> 选中该配置并确认 CA/解密开启后重连，完全退出支付宝，再进入哈啰复现一次广告。保留原试验配置以便切回。
+
 > 2026-11-20 当前开屏排查：优先看 [支付宝分析报告](alipay-analysis-2026-11-20.md)。
 > 新完整试验配置为 `AdBlock_SR.alipay.conf`，仅合并规则用 `fragment-alipay-current.conf`。
 > 哈啰 `adx.ssp.show` 在日志中已被拒绝，但用户反馈 6 秒开屏仍出现，
