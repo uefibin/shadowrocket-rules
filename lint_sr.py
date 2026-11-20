@@ -96,6 +96,10 @@ def check(path, online=False, fragment=False):
 
     # ---------- 2. 规则逐条校验 ----------
     rules = sections.get("Rule", [])
+    if fragment and not rules:
+        # 片段文件常常不带 [Rule] 段头（粘贴到别人配置中间时不能带），
+        # 这时把段头之前的内容整体当作规则区。
+        rules = sections.get("_preamble", [])
     seen = {}
     strategy_use = collections.Counter()
     qx_hits = 0
