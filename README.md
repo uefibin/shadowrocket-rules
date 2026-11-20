@@ -1,16 +1,12 @@
 # Shadowrocket 规则集
 
-> 最新复测：两条哈啰接口拦截都已命中，但 6 秒开屏仍在。
-> 下一步使用 `AdBlock_SR.alipay-diagnostic.conf`，它只追加 `render.alipay.com` 解密以记录具体 URL，**不是已修复版**。
-> 下载地址：`https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.alipay-diagnostic.conf`。
-> 选中该配置并确认 CA/解密开启后重连，完全退出支付宝，再进入哈啰复现一次广告。保留原试验配置以便切回。
-
-> 2026-11-20 当前开屏排查：优先看 [支付宝分析报告](alipay-analysis-2026-11-20.md)。
-> 新完整试验配置为 `AdBlock_SR.alipay.conf`，仅合并规则用 `fragment-alipay-current.conf`。
-> 哈啰 `adx.ssp.show` 在日志中已被拒绝，但用户反馈 6 秒开屏仍出现，
-> 因此试验版增加 `homepage.recommend.popUp` 候选拦截，尚待真机验证。
+> **当前状态（v8-wechat-adunit，2026-11-20）**：手机在跑的固定文件名配置是
+> `AdBlock_SR.alipay-diagnostic.conf`，下载地址不变：
+> `https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.alipay-diagnostic.conf`。
+> v8 把微信素材拦截从 404 改成 1 像素图（`- reject-img`），并把 posid 规则泛化到任意广告位。
+> **不承诺去掉微信 6 秒开屏**：证据见 [分析报告 v8 段](alipay-analysis-2026-11-20.md)，那层容器属于微信广告组件。
+> 在用的完整试验配置是 `AdBlock_SR.alipay.conf`，只合并规则用 `fragment-alipay-current.conf`。
 > `adblock-alipay-captured.conf` 的旧 IP 段拒绝已撤回；不要恢复 203.209.* 拦截。
-> 下方旧“实测”描述不代表这次已验证全部结论，以当前报告的证据范围为准。
 
 ## 当前哈啰开屏试验版：手机使用步骤
 
@@ -39,13 +35,40 @@ iOS Shadowrocket 的分流与去广告配置，针对**支付宝 / 微信内的�
 
 | 文件 | 说明 |
 | --- | --- |
-| `AdBlock_SR.slim.conf` | **主用**。完整配置，含分流策略组 + 去广告段 |
+| `AdBlock_SR.alipay-diagnostic.conf` | **手机在跑的固定文件名配置**，当前 v8-wechat-adunit（含微信素材层规则） |
+| `AdBlock_SR.slim.conf` | 干净版完整配置，含分流策略组 + 去广告段（v4 结论已合并） |
 | `AdBlock_SR.conf` | 上游原版（懒人配置），留作对比参考 |
+| `AdBlock_SR.alipay.conf` | 从上游生成的支付宝试验版完整配置 |
+| `adblock-alipay-mp.conf` | 支付宝小程序去广告片段 v4，抓包实测，可直接贴 |
+| `alipay-analysis-2026-11-20.md` | 逐轮抓包分析记录，**v8 段是微信端结论** |
+| `report/alipay-mp-analysis-20261120.md` | 支付宝抓包分析报告：接口清单、广告判定、证据原文 |
 | `lint_sr.py` | 配置校验器，改完先跑它 |
-| `adblock-alipay-captured.conf` | 支付宝小程序抓包结论片段，可单独贴 |
+| `adblock-alipay-captured.conf` | 早期支付宝小程序抓包片段（已被 v4 取代，留档） |
 | `adblock-wx-alipay.conf` | 微信/支付宝通用广告域名片段 |
 | `adblock.list` | 纯域名清单，适合并入已有配置 |
 | `verify_rules.py` | 早期规则引擎，可模拟某域名命中哪条（`lint_sr.py` 更全面，保留作互补） |
+
+### 工具（`tools/`）
+
+从手机的 Shadowrocket 日志流 `http://<手机IP>:1082/api/log` 抓包 → 解析 → 回放验证，
+是一条闭环。四个脚本都不需要第三方依赖。
+
+| 脚本 | 作用 |
+| --- | --- |
+| `tools/fetch_sr_log.py` | 抓流。自动重连、限时、按会话落盘到 `capture/` |
+| `tools/parse_sr_log.py` | 解析。还原成一条流 = 一条连接，输出 host / 规则命中 / 完整 URL / referer |
+| `tools/simulate_rules.py` | 用真实抓包回放规则（含 `[URL Rewrite]` 的 `- reject*` 条目），逐条给出判定 |
+| `tools/diff_capture.py` | 两次抓包的 A/B 差异，用来找广告素材域名 |
+| `tools/upgrade_v8.py` | 一次性迁移脚本：v7 的 `- reject` 升到 `- reject-img` 并泛化 posid |
+
+```bash
+python tools/fetch_sr_log.py --secs 300          # 抓 5 分钟
+python tools/parse_sr_log.py capture/sr-*.log --hosts
+python tools/parse_sr_log.py capture/sr-*.log --urls
+python tools/simulate_rules.py AdBlock_SR.alipay-diagnostic.conf capture-wechat-v6-log.txt
+python tools/diff_capture.py capture/A.log capture/B.log --hosts
+```
+
 
 ## 使用
 
@@ -75,10 +98,11 @@ https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.sli
 
 ### 方式二：只取规则段
 
-用 `fragment-alipay-hellobike.conf`：整段复制，粘到你现有配置 `[Rule]` 的**最上面**。
+用 `adblock-alipay-mp.conf`（v4）：整段复制，粘到你现有配置 `[Rule]` 的**最上面**。
 撤销就整段删掉。
 
 改动范围最小，适合只想加几条规则、不想动其余部分的情况。
+`fragment-alipay-hellobike.conf` 是它的前身，保留作对比。
 
 顺序不能改，原因见下。
 
@@ -88,9 +112,40 @@ https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.sli
 python lint_sr.py AdBlock_SR.slim.conf            # 语法、策略名、顺序、重复
 python lint_sr.py AdBlock_SR.slim.conf --online   # 另加远程规则集可达性探测
 python lint_sr.py 新.conf --compare 旧.conf        # 两版量化对比
+python tools/fetch_sr_log.py --secs 300           # 真机抓包
+python tools/simulate_rules.py adblock-alipay-mp.conf capture/*.log   # 抓包回放
 ```
 
 `--online` 走系统代理；需要时设 `HTTP_PROXY` 环境变量。
+
+## 微信小程序：6 秒开屏为什么拦不掉
+
+同一个小程序（哈啰）在微信里和在支付宝里是两套广告渠道，这是本次排查最花时间的结论：
+
+| | 支付宝内 | 微信内 |
+| --- | --- | --- |
+| 广告下发 | `api.hellobike.com/api?adx.ssp.show`，可解密、可 URL 拦截 | 微信广告组件（流量主），配置走加密通道，HTTPS 层看不到 |
+| 广告素材 | 自家或阿里 CDN | `wximg.wxs.qq.com/141/20204/snscosdownload/...`，由微信客户端下载 |
+| 能拦到哪一层 | 接口（广告直接不返回） | 只有素材（广告变留白，6 秒容器仍在） |
+
+判定素材是「微信客户端自己下的」而不是小程序页面下的，靠的是同一条日志里两种 UA 并存：
+
+- 小程序业务请求：`MicroMessenger/8.0.80 ... Mobile/15E148`，带 Referer；
+- 素材请求：`WeChat/8.0.80.34 CFNetwork/3896.200.61`，**没有 Referer**。
+
+同时 `wxa.wxs.qq.com/images/wxapp/` 出现 127 次广告组件的 UI 素材（关闭按钮 `xmark_black.png`、反馈图标、封面占位、渐变遮罩）—— 这些只在广告渲染时加载。**这些 UI 素材绝对不要拦**，拦了只会让广告关不掉或白块盖住页面。
+
+v8 因此在素材层只做两件稳妥的事：
+
+```
+# 动作用 1 像素图，不用 404：<image> 拿 404 会破图并重试
+^https?://wximg\.wxs\.qq\.com/141/20204/snscosdownload/[^?#]+\?(?:[^&#]*&)*posid=[^&#]+(?:[&#]|$) - reject-img
+```
+
+- posid 从写死的 `5060180989186180` 泛化为任意值，新广告位不用再补哈希；
+- 无 posid 的 18 张广告预览图仍按 `sha256=` 精确拒绝（换图即失效，这是可接受的取舍）。
+
+离线回放 6 份微信抓包（2225 个请求）：被拦的只有广告桶 184(posid)+64(sha256) 和两条哈啰广告接口 116，`wxa.wxs.qq.com` 的 UI 素材与登录/订单/地图/配置请求零命中。
 
 ## 踩过的坑
 
@@ -134,8 +189,27 @@ URL-REGEX,^https?://api\.hellobike\.com/api\?adx\.ssp\.show,REJECT
 支付失败 / 登录异常 / 风控提示。只能在域名和 IP 层 REJECT，效果相当于弱网，风控基本无感。
 
 **7. 策略名大小写别赌。**
-原文件规则写 `YOUTUBE`、组定义 `YouTube`，靠 SR 大小写不敏感才没出错。不该依赖这种运气。
+原文件规则写 `YOUTUBE`、组定义写 `YouTube`，靠 SR 大小写不敏感才没出错。不该依赖这种运气。
+
+**8. 判断「能不能拦」，看看规则是谁在替你判 —— 但只看名字会翻车。**
+本次抓包里 12 个接口名字都像营销位（`homepage.newWelfare`、`coupon.mall.module`、
+`medal.activity`、`msg.toast.user`），实际全都承载业务数据，拦了小程序缺数据。
+反过来 `adx.ssp.show`、`homepage.recommend.popUp` 才是真的广告下发口。
+结论：先抓包看清 URL 和调用时机，再决定拦不拦，别按名字猜。
+
+**9. 国内风控域名被丢进代理，比广告更影响体验。**
+`mum.alibabachengdun.com`（杭州橙盾，阿里系风控）和 `cdn.ynuf.aliapp.org`
+（阿里 WebUMID / 无痕验证码资源）本次实测全部命中 `FINAL,PROXY` 走了境外节点。
+表现是验证码转圈、偶发「网络环境异常」。这类域名必须显式 `DIRECT`，
+不能指望 `GEOIP,CN` —— 它们解析出 fake-ip，GEOIP 判不出归属（同坑 4）。
+
+**10. `/api/log` 是日志流，不是文件下载口。**
+`http://<手机IP>:1082/api/log` 是 chunked 长连接，连上就从缓冲区重放再追实时；
+手机浏览器里开着那个页面时脚本抢不到数据（收到 0 字节）；VPN 断开后端口直接
+`Connection refused`；日志里的中文是 GBK→UTF-8 二次编码，不反解码连策略名都对不上。
+`tools/fetch_sr_log.py` 把这几个坑都处理了。
 
 ## 免责
 
-当前试验版仍需真机验证，具体范围和撤销方式见分析报告。不要按公司归属或 IP 网段猜测广告用途。
+当前试验版仍需真机验证，具体范围和撤销方式见 `report/alipay-mp-analysis-20261120.md`。
+不要按公司归属或 IP 网段猜测广告用途。
