@@ -25,26 +25,28 @@ Shadowrocket › 配置 › 添加 › 输入 URL：
 https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.slim.conf
 ```
 
-**这份是「配置模板」，不是开箱即用包**，导入前确认两件事：
+**节点不受影响。** 服务器列表是独立存放的，导入配置只换配置本身，不会删你的节点或订阅。
+代理组会自己从你已有的节点里建出来：
 
-1. **节点名字要对得上。** 文件里没有 `[Proxy]` 段，代理组的成员写的是
-   `PROXY` / `香港节点` / `台湾节点` / `日本节点` / `新加坡节点` / `韩国节点` / `美国节点`。
-   你的节点列表里必须真有这些名字，否则组是空的、`FINAL,PROXY` 也无处可去。
-   名字不同就批量替换成你自己的。
-2. **`[General]` / `[Host]` / `[URL Rewrite]` / `[MITM]` 会被整段覆盖。**
-   如果你原来的 MITM 里还有别的主机名，导入后会丢。
+- `PROXY` 是 Shadowrocket 内置策略，代表「当前选中的节点」，不需要 `[Proxy]` 段。
+  日志里 `FINAL,PROXY # CF官方优选1` 就是这个意思。
+- `香港节点` / `美国节点` 等 6 个地区组用的是
+  `policy-regex-filter=🇭🇰|HK|香港|…`，按关键词从你的节点里自动筛选，节点叫什么都行。
 
-配置里 MITM 只开了 `*.google.cn` 和 `*.hellobike.com` —— 后者是必须的，
-不开就无法解密，`adx.ssp.show` 那条 URL 规则等于没写。
+**会被整段覆盖的只有配置内的这几段**：`[General]`、`[Host]`、`[URL Rewrite]`、`[MITM]`。
+其中 `[MITM]` 值得看一眼 —— 如果你原来的配置里还有别的主机名，导入后就只剩本文件的。
 
-已有调好的配置，别用这个方式，用方式二。
+本文件 MITM 开的是 `*.google.cn` 和 `*.hellobike.com`。后者是必须的：
+不解密 HTTPS 就只能看到域名、看不到 path 和 query，`adx.ssp.show` 那条 URL 规则等于没写。
 
-### 方式二：只取规则段（推荐）
+原配置不会丢，配置列表里随时可以切回去。
 
-直接用 `fragment-alipay-hellobike.conf`：整段复制，粘到你现有配置 `[Rule]` 的**最上面**。
+### 方式二：只取规则段
+
+用 `fragment-alipay-hellobike.conf`：整段复制，粘到你现有配置 `[Rule]` 的**最上面**。
 撤销就整段删掉。
 
-这个方式不动你的节点、分组、MITM 和 `[General]`，出问题只影响一个小段落，好回退。
+改动范围最小，适合只想加几条规则、不想动其余部分的情况。
 
 顺序不能改，原因见下。
 
