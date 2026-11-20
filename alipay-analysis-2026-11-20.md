@@ -1,5 +1,13 @@
 # 支付宝小程序抓包分析（2026-11-20）
 
+## 固定配置 v4-popup-rewrite 发布
+
+用户要求直接更新文件并推送，继续使用 `AdBlock_SR.alipay-diagnostic.conf`。最近复测日志 16:37:20–16:38:01 中，`platform.wx.popup.msg` 三次仍命中 hellobike.com DIRECT，`adx.ssp.show` 六次 REJECT。因此前者新增规则尚未在日志中验证生效，不能据此判定其拦截一定无效，也不能仅凭 DIRECT 判定是更新缓存还是优先级问题。
+
+本版在原有 URL-REGEX 之外，为同一精确接口补充 `[URL Rewrite]` 的 `- reject`，并启用 `always-reject-url-rewrite = true`，让该重写在其他路由模式也可执行。该开关含义见[配置维护者的说明](https://github.com/LOWERTOP/Shadowrocket/wiki/)。补充同一固定文件的 `update-url`，版本注释改为 `v4-popup-rewrite`，方便检查手机更新内容。
+
+本次没有新增其他广告接口候选，未封锁整域；微信整屏广告仍待真机复测。若客户端根本未加载新内容，HTTP 重写同样不会生效，用户仍需更新同一配置并重连。若影响业务弹窗，需同时注释 `[Rule]` 与 `[URL Rewrite]` 中的两处 `platform.wx.popup.msg`，然后保存重连。
+
 ## 微信哈啰：沿用固定配置链接
 
 ### 补充主机解密后的复测
