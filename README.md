@@ -1,10 +1,11 @@
 # Shadowrocket 规则集
 
-> **当前状态（v8-wechat-adunit，2026-11-20）**：手机在跑的固定文件名配置是
+> **当前状态（v9-wechat-bucket，2026-11-20）**：手机在跑的固定文件名配置是
 > `AdBlock_SR.alipay-diagnostic.conf`，下载地址不变：
 > `https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.alipay-diagnostic.conf`。
-> v8 把微信素材拦截从 404 改成 1 像素图（`- reject-img`），并把 posid 规则泛化到任意广告位。
-> **不承诺去掉微信 6 秒开屏**：证据见 [分析报告 v8 段](alipay-analysis-2026-11-20.md)，那层容器属于微信广告组件。
+> v8 复测仍见整屏广告，原因是那层容器由微信广告组件原生渲染 —— 抓包里素材请求已在设备上被拒 52 次，
+> 开屏照样出现。v9 把素材改成按桶拒绝（样本 131/131 覆盖），**仍然只能让画面变空白，不能去掉 6 秒容器**。
+> 想要真的没有开屏：用支付宝里的哈啰（那条 `adx.ssp.show` 已被拦住），微信版只能等开发者关广告位。
 > 在用的完整试验配置是 `AdBlock_SR.alipay.conf`，只合并规则用 `fragment-alipay-current.conf`。
 > `adblock-alipay-captured.conf` 的旧 IP 段拒绝已撤回；不要恢复 203.209.* 拦截。
 
@@ -35,7 +36,8 @@ iOS Shadowrocket 的分流与去广告配置，针对**支付宝 / 微信内的�
 
 | 文件 | 说明 |
 | --- | --- |
-| `AdBlock_SR.alipay-diagnostic.conf` | **手机在跑的固定文件名配置**，当前 v8-wechat-adunit（含微信素材层规则） |
+| `AdBlock_SR.alipay-diagnostic.conf` | **手机在跑的固定文件名配置**，当前 v9-wechat-bucket（素材按桶拒绝） |
+| `fragment-wechat-creatives-granular.conf` | 微信素材精确规则（posid / sha256），按桶拒绝误伤时切回 |
 | `AdBlock_SR.slim.conf` | 干净版完整配置，含分流策略组 + 去广告段（v4 结论已合并） |
 | `AdBlock_SR.conf` | 上游原版（懒人配置），留作对比参考 |
 | `AdBlock_SR.alipay.conf` | 从上游生成的支付宝试验版完整配置 |
@@ -135,17 +137,20 @@ python tools/simulate_rules.py adblock-alipay-mp.conf capture/*.log   # 抓包�
 
 同时 `wxa.wxs.qq.com/images/wxapp/` 出现 127 次广告组件的 UI 素材（关闭按钮 `xmark_black.png`、反馈图标、封面占位、渐变遮罩）—— 这些只在广告渲染时加载。**这些 UI 素材绝对不要拦**，拦了只会让广告关不掉或白块盖住页面。
 
-v8 因此在素材层只做两件稳妥的事：
+v9 因此在素材层只做一件稳妥的事 —— 按桶拒绝，不再追哈希：
 
 ```
 # 动作用 1 像素图，不用 404：<image> 拿 404 会破图并重试
-^https?://wximg\.wxs\.qq\.com/141/20204/snscosdownload/[^?#]+\?(?:[^&#]*&)*posid=[^&#]+(?:[&#]|$) - reject-img
+^https?://wximg\.wxs\.qq\.com/141/20204/snscosdownload/ - reject-img
 ```
 
-- posid 从写死的 `5060180989186180` 泛化为任意值，新广告位不用再补哈希；
-- 无 posid 的 18 张广告预览图仍按 `sha256=` 精确拒绝（换图即失效，这是可接受的取舍）。
+- 样本里该桶 131 次请求全是广告素材，正常图片一张没见过，所以按桶拦；
+- 素材每轮换 fileid/sha256（v5→v6 两分钟新增 37、消失 19），逐条匹配永远慢一步；
+- 精确规则没删，移到 `fragment-wechat-creatives-granular.conf`，误伤时切回。
 
-离线回放 6 份微信抓包（2225 个请求）：被拦的只有广告桶 184(posid)+64(sha256) 和两条哈啰广告接口 116，`wxa.wxs.qq.com` 的 UI 素材与登录/订单/地图/配置请求零命中。
+离线回放 6 份微信抓包（2225 个请求）：`REWRITE-REJECT` 131（整桶全覆盖）、规则层 REJECT 47，`wxa.wxs.qq.com` 的 UI 素材与登录/订单/地图/配置请求零命中；支付宝两份抓包零影响。
+
+**关键事实：素材请求在设备上确实被拒过（v6 会话 52 次），开屏照样出现。** 所以这层只能让画面变空白，容器出不出来由微信广告组件决定。要真的没有开屏 —— 用支付宝里的哈啰；微信版要等小程序开发者关掉广告位。
 
 ## 踩过的坑
 
