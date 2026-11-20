@@ -2,6 +2,17 @@
 
 ## 微信哈啰：沿用固定配置链接
 
+### 补充主机解密后的复测
+
+用户继续反馈广告存在。新日志覆盖 16:33:39–16:34:26，426109 字节，加载文件仍为 `AdBlock_SR.alipay-diagnostic.db`，MITM 列表包含新增的 m/cdn/abapi 三个主机；解密后观测到 `AppHellobikeWXSS/apmConfig.json`、微信端首页配置及业务请求，表明配置更新已生效。
+
+- `adx.ssp.show` 六次查询均 REJECT，仍不足以认定所有微信广告均被覆盖。
+- `platform.wx.popup.msg` 两次 DIRECT：16:33:55.190、16:34:08.254。微信端弹窗消息候选，但无响应体，不能确认全部为广告，拒绝可能影响业务通知。
+- `homepage.banner.bubble.tip` 两次 DIRECT：16:33:55.011、16:34:07.848。首页气泡候选，但无响应体，不能确认与用户广告对应。
+- `homepage.wechat.config`、`homepage.module.wechat`、`bottom.aggregation.tab.info`、登录与订单接口属于当前首页加载链路，不根据名字扩大封锁。
+
+新样本仍未记录 HTTP 响应体。先确认用户看到的是开屏、底部商品还是弹窗/气泡，再选择单一候选做对照，不将两个接口同时称为已确认的广告接口。此次原始日志仅本机保存为 `capture-wechat-retest-log.txt`。
+
 用户要求处理同名的微信哈啰小程序，并明确不要反复更改文件名。后续继续更新 `AdBlock_SR.alipay-diagnostic.conf` 这一固定下载链接。用户反馈支付宝广告“好像没了”，记录为单次测试结果，不据此宣称所有广告均已解决。
 
 本次读取日志覆盖 16:28:25–16:31:02，约 855 KB。微信阶段自 16:30 左右开始，已观测到带 MicroMessenger User-Agent 的以下流量：
