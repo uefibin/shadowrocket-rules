@@ -22,7 +22,7 @@ iOS Shadowrocket 的分流与去广告配置，针对**支付宝 / 微信内的�
 Shadowrocket › 配置 › 添加 › 输入 URL：
 
 ```
-https://raw.githubusercontent.com/ueibin/shadowrocket-rules/main/AdBlock_SR.slim.conf
+https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.slim.conf
 ```
 
 注意这是**完整配置**，订阅后节点组会从你的订阅里按关键词自动筛选（香港/台湾/日本/新加坡/韩国/美国）。
