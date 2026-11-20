@@ -1,5 +1,15 @@
 # 支付宝小程序抓包分析（2026-11-20）
 
+## v4 已生效但微信开屏仍在：撤回无效候选，转向资源观测
+
+用户复测后仍见启动整屏广告。16:42:46–16:43:19 的最新日志记录 `platform.wx.popup.msg` 一次明确命中 URL-REGEX REJECT，`adx.ssp.show` 三次 REJECT。这排除了“新增候选一直未命中”这个先前问题，但仍不能证明广告由何处下发。v5 删除微信 popup 候选在 Rule 与 URL Rewrite 两处的拒绝，恢复 always-reject-url-rewrite 为 false；支付宝原有两条规则保留。
+
+本轮进一步实际下载并检查了两个候选图片：`m.hellobike.com/51791357da.gif` 是“扫一扫”动画按钮；记录里的 `wxsnsdythumb.wxs.qq.com/.../64896d500007a9ae0acc51d22c96970b0000008d00004eec` 是黑色渐变遮罩。二者都不是具体广告商品素材，不拦截它们。图片仅本机保存，不上传。
+
+日志中 `wximg.wxs.qq.com` 有 12 次域名级查询，具体路径尚未解密。v5-resource-trace 仅将此精确主机加到 MITM，用于记录资源路径，不新增广告拒绝。微信原生组件可能经 MMTLS 下发内容，若仍无独立广告 URL，则现有 Shadowrocket 日志不足以制定精确规则。不能把所有 wximg、MMTLS 或 servicewechat 域名封锁来宣称解决。新增主机若造成微信图片异常，应从 hostname 删除 `wximg.wxs.qq.com` 并重连。
+
+仍使用固定文件名 `AdBlock_SR.alipay-diagnostic.conf`。当前微信开屏问题未解决，需要这次资源观测结果及微信实际开屏截图来进一步对应请求与展示。
+
 ## 固定配置 v4-popup-rewrite 发布
 
 用户要求直接更新文件并推送，继续使用 `AdBlock_SR.alipay-diagnostic.conf`。最近复测日志 16:37:20–16:38:01 中，`platform.wx.popup.msg` 三次仍命中 hellobike.com DIRECT，`adx.ssp.show` 六次 REJECT。因此前者新增规则尚未在日志中验证生效，不能据此判定其拦截一定无效，也不能仅凭 DIRECT 判定是更新缓存还是优先级问题。
