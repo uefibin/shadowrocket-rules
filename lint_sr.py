@@ -82,7 +82,7 @@ def is_ip_rule(rt):
     return rt in IPRULE_TYPES
 
 
-def check(path, online=False):
+def check(path, online=False, fragment=False):
     sections, raw_lines = parse(path)
     errs, warns, infos = [], [], []
 
@@ -182,11 +182,12 @@ def check(path, online=False):
         warns.append(f"策略 '{pol}'（{cnt} 条规则引用）在本文件内未定义 —— 若它来自订阅/节点名则正常")
 
     # ---------- 5. 结构 ----------
-    for need in ("General", "Rule"):
-        if need not in sections:
-            errs.append(f"缺少 [{need}] 段")
-    if not any(r[1].upper().startswith("FINAL") for r in rules):
-        errs.append("[Rule] 中没有 FINAL 兜底")
+    if not fragment:
+        for need in ("General", "Rule"):
+            if need not in sections:
+                errs.append(f"缺少 [{need}] 段")
+        if not any(r[1].upper().startswith("FINAL") for r in rules):
+            errs.append("[Rule] 中没有 FINAL 兜底")
     if "Proxy" in sections and all(b.startswith("#") for _, b in sections["Proxy"]):
         infos.append("[Proxy] 段存在但无有效内容，可以删掉")
 
@@ -291,11 +292,13 @@ def main():
     ap.add_argument("conf")
     ap.add_argument("--online", action="store_true", help="探测远程规则集可达性与体积")
     ap.add_argument("--compare", metavar="OTHER", help="与另一个配置对比")
+    ap.add_argument("--fragment", action="store_true",
+                    help="按规则片段校验：不要求 [General] 与 FINAL")
     args = ap.parse_args()
 
     if args.compare:
         return compare(args.conf, args.compare)
-    return check(args.conf, args.online)
+    return check(args.conf, args.online, args.fragment)
 
 
 if __name__ == "__main__":
