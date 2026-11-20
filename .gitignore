@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 
 # 抓包 / 调试产物
+capture-log.json
 *.log
 *-log.txt
 dns-log.txt

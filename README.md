@@ -1,5 +1,32 @@
 # Shadowrocket 规则集
 
+> 2026-11-20 当前开屏排查：优先看 [支付宝分析报告](alipay-analysis-2026-11-20.md)。
+> 新完整试验配置为 `AdBlock_SR.alipay.conf`，仅合并规则用 `fragment-alipay-current.conf`。
+> 哈啰 `adx.ssp.show` 在日志中已被拒绝，但用户反馈 6 秒开屏仍出现，
+> 因此试验版增加 `homepage.recommend.popUp` 候选拦截，尚待真机验证。
+> `adblock-alipay-captured.conf` 的旧 IP 段拒绝已撤回；不要恢复 203.209.* 拦截。
+> 下方旧“实测”描述不代表这次已验证全部结论，以当前报告的证据范围为准。
+
+## 当前哈啰开屏试验版：手机使用步骤
+
+1. 在 Shadowrocket 的「配置」页添加远程配置，填入：
+
+   ```text
+   https://raw.githubusercontent.com/uefibin/shadowrocket-rules/main/AdBlock_SR.alipay.conf
+   ```
+
+2. 下载后点选 `AdBlock_SR.alipay.conf`，确认它成为当前启用配置（有勾选标记）。保留原配置，方便切回。
+3. 点击该配置右侧的 ⓘ，进入「HTTPS 解密」并开启。新文件没有 CA 私钥；如果没有可用证书，生成 CA 并安装证书。
+4. 安装证书时，进入 iPhone「设置 → 已下载描述文件」安装；再到「设置 → 通用 → 关于本机 → 证书信任设置」，开启对应 Shadowrocket CA 的完全信任。若已安装与当前配置匹配的 CA，无需重复生成。
+5. 确认解密主机名包含 `api.hellobike.com`。本配置已写入该主机名；不要扩大到全部支付宝域名。
+6. 回到首页，将「全局路由」设为「配置」，连接 Shadowrocket。完全关闭哈啰小程序后重新进入，检查 6 秒开屏、登录、地图和订单查询。
+
+本版启用两条接口规则：`adx.ssp.show` 和试验项 `homepage.recommend.popUp`。前者已有日志命中证据，后者尚需真机确认；不保证已经消除开屏。若出现功能异常，可在配置编辑中给 `homepage.recommend.popUp` 的 `URL-REGEX` 行加 `#` 注释，再保存重连，或切回原配置。
+
+若希望保留自己现有配置及 CA，仅将 [`fragment-alipay-current.conf`](fragment-alipay-current.conf) 中的有效规则插入已有 `[Rule]` 最前面，并将 `api.hellobike.com` 追加到已有 `[MITM]` 的 `hostname`。片段不能单独作为完整配置启用。
+
+后续更新时，在「配置」页更新这份远程配置，再检查选中状态、HTTPS 解密开关与 CA。编辑远程配置生成的本地内容可能在下一次更新时被覆盖。
+
 iOS Shadowrocket 的分流与去广告配置，针对**支付宝 / 微信内的小程序**做了实测优化。
 规则里的每一条拦截都写明了依据，能查到来路；不是抄来的通用黑名单。
 
@@ -106,5 +133,4 @@ URL-REGEX,^https?://api\.hellobike\.com/api\?adx\.ssp\.show,REJECT
 
 ## 免责
 
-规则按「能拦就拦」的思路写，没有做灰度验证。`203.209.x` 三段和淘宝/支付宝的图片 CDN
-在同一批机房，若发现**商品图、头像变灰块**，先把那一段注释掉再逐条加回。
+当前试验版仍需真机验证，具体范围和撤销方式见分析报告。不要按公司归属或 IP 网段猜测广告用途。
